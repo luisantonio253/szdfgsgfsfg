@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Receptor Holográfico</title>
+<style>
+body { font-family: sans-serif; text-align: center; }
+video { width: 320px; height: 240px; border: 2px solid #000; }
+#holo { 
+    width: 320px; 
+    height: 240px; 
+    margin: 20px auto; 
+    transform: rotateX(180deg) scaleY(-1); 
+}
+</style>
+</head>
+<body>
+<h1>Receptor Holográfico</h1>
+<div id="holo">
+<video id="remoteVideo" autoplay playsinline></video>
+</div>
+
+<script>
+const remoteVideo = document.getElementById('remoteVideo');
+let pc = new RTCPeerConnection();
+
+// Receber vídeo
+pc.ontrack = e => remoteVideo.srcObject = e.streams[0];
+
+// Pegar offer da URL
+const params = new URLSearchParams(window.location.search);
+const offerParam = params.get('offer');
+if(!offerParam){
+    alert("Nenhuma offer encontrada!");
+} else {
+    const offer = JSON.parse(decodeURIComponent(offerParam));
+
+    // DataChannel para enviar answer
+    pc.ondatachannel = event => {
+        const channel = event.channel;
+        channel.onopen = async () => {
+            await pc.setRemoteDescription(offer);
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            channel.send(JSON.stringify(answer));
+            console.log("Answer enviada!");
+        };
+    };
+
+    // criar DataChannel fake para disparar ondatachannel
+    pc.createDataChannel("init");
+}
+</script>
+</body>
+</html>

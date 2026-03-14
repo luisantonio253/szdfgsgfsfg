@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Transmissor Holográfico</title>
+<style>
+body { font-family: sans-serif; text-align: center; }
+video { width: 320px; height: 240px; border: 2px solid #000; }
+input { width: 90%; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>Transmissor Holográfico</h1>
+<video id="localVideo" autoplay playsinline muted></video>
+<p>Link para o receptor:</p>
+<input type="text" id="linkReceptor" readonly>
+
+<script>
+const localVideo = document.getElementById('localVideo');
+let pc = new RTCPeerConnection();
+
+// Captura webcam
+navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(stream=>{
+    localVideo.srcObject = stream;
+    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+});
+
+// Criar DataChannel para enviar sinal
+const dc = pc.createDataChannel("signal");
+
+// Receber answer do receptor
+dc.onmessage = async e => {
+    const data = JSON.parse(e.data);
+    if(data.type === "answer"){
+        await pc.setRemoteDescription(data);
+        console.log("Answer recebida!");
+    }
+};
+
+// Criar offer e gerar link
+async function start(){
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    const offerString = encodeURIComponent(JSON.stringify(offer));
+    document.getElementById('linkReceptor').value = window.location.origin + '/receptor.html?offer=' + offerString;
+}
+start();
+</script>
+</body>
+</html>
